@@ -26,13 +26,13 @@ import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 /**
- * HTTPS With Servlet.
- * Get client certificate.
+ * Enabling Client Authentication
+ * Get client certificate in the servlet.
  * 
  * @author Tom Misawa (riversun.org@gmail.com)
  *
  */
-public class Step4GetCertInfoHttpsServer {
+public class Step5ClientCertificateAuthServer {
 
     public static void main(String[] args) throws Exception {
 
@@ -47,6 +47,9 @@ public class Step4GetCertInfoHttpsServer {
 
         // Set keystorepassword
         sslContextFactory.setKeyStorePassword("mypassword");
+
+        // Enabling client auth
+        sslContextFactory.setWantClientAuth(true);
 
         HttpConfiguration httpConfig = new HttpConfiguration();
         httpConfig.setSecureScheme("https");
@@ -102,18 +105,32 @@ public class Step4GetCertInfoHttpsServer {
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-            X509Certificate[] clientCerts = (X509Certificate[]) req.getAttribute("javax.servlet.request.X509Certificate");
+            final X509Certificate[] clientCerts = (X509Certificate[]) req.getAttribute("javax.servlet.request.X509Certificate");
+            final String cipherSuite = (String) req.getAttribute("javax.servlet.request.cipher_suite");
+            final Integer keySize = (Integer) req.getAttribute("javax.servlet.request.key_size");
+            final String idStr = (String) req.getAttribute("javax.servlet.request.ssl_session_id");
 
-            if (clientCerts != null && clientCerts.length > 0) {
-                X509Certificate x509 = clientCerts[0];
-                System.out.println("cert=" + x509.getSubjectDN());
+            final StringBuilder sb = new StringBuilder();
+
+            if (clientCerts != null) {
+                for (int i = 0; i < clientCerts.length; i++) {
+                    final X509Certificate cert = clientCerts[i];
+                    sb.append("cert[" + i + "] subjectDN=" + cert.getSubjectDN()).append("\n");
+                }
+            } else {
+                sb.append("No certificate!").append("\n");
             }
+            sb.append("cipherSuite=" + cipherSuite).append("\n");
+            sb.append("keySize=" + keySize).append("\n");
+            sb.append("idStr=" + idStr).append("\n");
 
             resp.setContentType("text/plain; charset=UTF-8");
 
             final PrintWriter out = resp.getWriter();
 
             out.println("Hello Servlet");
+            out.println("Client Certificate Info");
+            out.println(sb.toString());
             out.close();
 
         }
